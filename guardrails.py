@@ -31,9 +31,20 @@ def check_prompt_injection(text: str) -> bool:
             return True
     return False
 
+def enforce_token_budget(query: str, max_budget: int = 50):
+    """
+    Enforces a strict runtime token budget cap.
+    Using a word-split proxy to simulate token cost for local execution.
+    """
+    estimated_tokens = len(query.split())
+    
+    if estimated_tokens > max_budget:
+        raise ValueError(f"Runtime Governance Alert: Request size ({estimated_tokens} tokens) exceeds the maximum allowed budget of {max_budget} tokens. Request rejected to prevent budget overrun.")
+    
+    return query
+
 # Quick test to ensure it works
 if __name__ == "__main__":
     test_input = "My order is delayed. Call me at 9876543210. Refund to card ending in 4321."
     print("Original:", test_input)
     print("Masked:", mask_pii(test_input))
-    

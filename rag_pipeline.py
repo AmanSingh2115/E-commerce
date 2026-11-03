@@ -31,27 +31,33 @@ def setup_rag_collection():
         
     return collection
 
-def retrieve_policy(query_text: str, n_results: int = 1) -> str:
+def retrieve_policy(query_text: str, n_results: int = 1, threshold: float = 1.2) -> str:
     """
     Queries the local vector database for the most relevant policy.
+    Enforces a strict distance threshold to prevent hallucinations.
     """
     client = chromadb.PersistentClient(path="./chroma_db")
     collection = client.get_collection(name="nykaa_policies")
     
+    # 1. Ask ChromaDB to include 'distances' in the results
     results = collection.query(
         query_texts=[query_text],
-        n_results=n_results
+        n_results=n_results,
+        include=["documents", "distances"] 
     )
     
     if results['documents'] and results['documents'][0]:
-        return results['documents'][0][0]
-    return "No relevant policy found."
-
-if __name__ == "__main__":
-    print("Setting up Local RAG Pipeline...")
-    setup_rag_collection()
-    print("\nTesting the RAG retrieval:")
-    test_query = "How many days do I have to return an item?"
-    print(f"Query: '{test_query}'")
-    print(f"Retrieved Policy: {retrieve_policy(test_query)}")
-    
+        best_doc = results['documents'][0][0]
+        distance = results['distances'][0][0]
+        
+        # Print the distance so you can calibrate your threshold for Task 4
+        print(f"\n[DEBUG RAG] Query: '{query_text}' | Distance Score: {distance:.4f}")
+        
+        # 2. Reject the query if the distance is too high (poor match)
+        # You must tune this threshold number based on your printed debug scores!
+        if distance > threshold:
+            return "I don't know. I cannot find this information in the knowledge base."
+            
+        return best_doc
+        
+    return "I don't know. I cannot find this information in the knowledge base."
